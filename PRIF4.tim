@@ -236,7 +236,6 @@ void lead_on(){
  	ITEM_POSbind_fixspot(1,1);
 	EOGfixwin_size_x = fix_win_size;
     EOGfixwin_size_y = fix_win_size;
-	Gflush(1);
 	//Gon_off(10,1); diode
 	Gflush(1);
 	
