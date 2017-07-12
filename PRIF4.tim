@@ -1,5 +1,5 @@
 /*
-PRIF3 06.97.17
+PRIF4 07.12.17
 Same as PRIF3 except with 6 targets
 Monkey makes saccade to left, right and down targets in succession. 
 
