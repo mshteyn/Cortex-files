@@ -1,0 +1,533 @@
+/*
+PRIF3 06.97.17
+Same as PRIF3 except with 6 targets
+Monkey makes saccade to left, right and down targets in succession. 
+
+Made some digial board changes to allow Arun's code to work on Tamara's ISA
+board layout.
+2-18-09 TM
+*/
+
+#include "css_inc.h"
+
+void begin_trial();
+void set_everything();
+void fix_spot_on();
+void await_fixation();
+void check_fixation();
+void lead_on();
+void await_saccade();
+void await_target_attainment();
+void give_reward();
+void double_reward();
+void inter_trial_interval(); 
+void rate_response(); 
+void finish_trial();
+void start_plexon();
+void write_plexon(int code);
+void stop_plexon();
+
+#define prg_ID        100106
+#define fixed_delay   400
+#define attain_fix_window 2000
+#define stim_on 320
+#define flash   320
+#define inter_stim 200
+#define keep_fix   300
+#define pre_target_delay 5
+#define reward_clicks 1
+#define good_pause 500
+#define bad_pause 1500
+#define fix_win_size 4.00 /* size of window around fix spot (X 10) */
+#define pre_win_size 6.50 /* size of window around target spot (X 10) */
+#define pst_win_size 4.50
+
+#define allocation_flag _int0
+#define loc _int1
+#define XX _pfloat1
+#define YY _pfloat2
+#define H  _pfloat3     /* H  = Hits (Sac on Nonmatch) */
+#define M  _pfloat4     /* M  = Miss (Fix on Nonmatch) */
+#define FA _pfloat5     /* FA = False Alarm (Sac on Match) */
+#define CR _pfloat6     /* CR = Correct Rejection (Fix on Match) */
+#define excess _pfloat7 /* excess = fraction of trials beyond random */
+#define P _pint0
+#define VAR _pint1
+
+int fail_flag;
+int response_flag; /* 0 = sat in window, 1 = left window, 2 = hit target */
+int prev_loc;
+int loc;
+int K;
+int N;
+int CT;
+int out=0;  
+int last=0;
+
+int delT = 400;
+int REWARD_TIME = 305;
+int randel = 725;
+int r_inv = 250;
+int inc = 10;
+int sacc_wait = delT+10;
+
+
+pfloat x_center;
+pfloat y_center;
+pfloat x_size;
+pfloat y_size;
+
+main(){
+
+     fail_flag = 0; /* default: correct */
+     response_flag = 0; 
+     start_plexon();
+     
+	 write_plexon(prg_ID); /* program_id */
+	 write_plexon(fix_win_size+200); /*window size+200*/
+     
+	 begin_trial();
+	 ITEM_POSget(1, 1, x_center, y_center, x_size, y_size);
+	 //write_plexon(x_center); /*center of stim*/
+	 //write_plexon(y_center);
+     N = BLOCKget_cond_num();
+     write_plexon(98+N); /* 98 + condition number */
+	 write_plexon(delT); /* delay interval */
+	 write_plexon(sacc_wait); /* max resposne time */
+
+	 DEVoutp(1,0x1,255); /* erase port B */
+	 	 
+     await_fixation();
+     if (fail_flag == 0){
+          //set_timer(target_on);
+          lead_on();
+     }
+	 
+	 if (fail_flag == 0){
+		await_saccade();
+	}
+	 
+     if(fail_flag==0){
+		  last = -1;
+		  
+		  if(N==-5) {
+			double_reward();
+		  }
+		  
+          give_reward();
+     }
+	 
+	 if(fail_flag != 0){
+		write_plexon(fail_flag);
+	}
+	
+     finish_trial();
+     rate_response();
+     inter_trial_interval();
+     stop_plexon(); 
+     end_trial();
+}
+
+void begin_trial(){
+     long current; 
+
+     if (allocation_flag != 999)
+     {
+     
+//        Variables for All programs     
+		  DEVoutp(0,0x1,255); /* erase port B */
+          DEVoutp(0,0x2,255); /* erase port C */
+          DEVoutp(1,0x1,255); /* erase port B */
+          DEVoutp(1,0x2,255); /* erase port C */
+          DEVoutp(1,0x3,128); /* Card2: A:OUT, B:OUT, CL:OUT, CU:IN */
+          DEVoutp(2,0x3,145); /* Card3: A:IN, B:OUT, CL:IN, CU:OUT */
+          DEVoutp(2,0x1,255); /* erase port B */
+          DEVoutp(2,0x2,255); /* erase port C */
+          XX = calloc(7, sizeof(float));
+          YY = calloc(7, sizeof(float));
+          loc = 0; /* used in timing file t1? */
+
+//        Variables for Carl's T1 calibration program        
+          VAR = calloc(4, sizeof(pint));
+          VAR[1] = fix_win_size; /* Fix EyeWin X (x 10) */
+          VAR[2] = fix_win_size; /* Fix EyeWin Y (x 10) */
+          //VAR[3] = targ_win_size; /* Targ EyeWin X (x 10) */
+          //VAR[4] = targ_win_size; /* Targ EyeWin Y (x 10) */
+          
+//        Variables for Arun's T2 Saccade calibration to estimate jitter
+          fail_flag = 0;          
+          H  = calloc(3,sizeof(float));
+          M  = calloc(3,sizeof(float));
+          FA = calloc(3,sizeof(float));
+          CR = calloc(3,sizeof(float));
+          excess = calloc(3,sizeof(float)); 
+          P = calloc(8,sizeof(pint));
+          srand2(time(&current));
+     }
+     allocation_flag = 999;
+     display_histogram();
+     display_trial_progress(1);
+     write_plexon(96); /* begin eye data collection */
+     put_eye_data_in_buf(1);
+     collect_data(1);
+     start_trial(10);
+     return;
+}
+
+void await_fixation(){
+
+	 set_timer(attain_fix_window);
+	 GmoveABS(0, 0, 0);
+     move_fixspot(1,0*100,0*100); /* move fixspot to loc 4 */
+     Gon_off(0,1); 
+	 DrawBox(0, 0, 2, 2, 15);
+	 Gflush(1); 
+     write_plexon(80); /* Left target on */
+
+
+     while(timer_expired() == 0){
+          display_eye_path(1);
+          if (get_fixation_state() == 1){
+			   MS_TIMERset(2, 50); // fix jitter
+			   while (MS_TIMERcheck(2) != 0){
+					if (get_fixation_state() == 0){
+						break;
+						}
+					}
+				write_plexon(20); /* fix aquired */
+				if (get_fixation_state() == 1){
+					histogram_Ctik(14);
+					return;
+				}
+           }
+     }
+     fail_flag = 171; /* No start */
+     return;
+}
+
+void check_fixation(){
+	
+	  display_eye_path(1);
+	  if (get_fixation_state() == 0){
+		   fail_flag = 1;
+		   return;	
+		   }
+	
+	return;
+}
+	
+	
+void lead_on(){
+
+	set_timer(fixed_delay);
+	
+	write_plexon(31); /* fix delay start*/
+	while(timer_expired()==0){
+		check_fixation();
+		if (fail_flag ==1){
+			fail_flag = 172; /*fixed delay break */
+			return;
+		}
+	}
+	
+	write_plexon(32); /*fix delay end*/
+
+	MS_TIMERset(3,stim_on);
+	Gon_off(0,0);
+	Gon_off(1,1);
+ 	ITEM_POSbind_fixspot(1,1);
+	EOGfixwin_size_x = fix_win_size;
+    EOGfixwin_size_y = fix_win_size;
+	Gflush(1);
+	//Gon_off(10,1); diode
+	Gflush(1);
+	
+	write_plexon(33); /*half delay on*/
+	
+	while (MS_TIMERcheck(3) != 0){
+		check_fixation();
+		if (fail_flag == 1){
+			fail_flag = 181; /*pre-cue fixation break*/
+			return;
+		}	
+	}
+	write_plexon(34); /*half delay off*/
+
+	Gon_off(1,0);
+	Gon_off(0,1);
+	Gflush(1);
+	
+	write_plexon(35); /*central stim on*/
+	MS_TIMERset(3,stim_on);
+	while (MS_TIMERcheck(3) != 0){
+		check_fixation();
+		if (fail_flag ==1){
+		    fail_flag = 182;/*break during central stim*/
+			return;
+		}	
+	}
+	
+	write_plexon(36); /*central stim off*/
+	
+	
+	Gon_off(4,1);
+	//n_off(5,1);
+	Gflush(1);
+	
+	write_plexon(37); /*perif flash on*/
+	
+	MS_TIMERset(4,flash);
+		while (MS_TIMERcheck(4) != 0){
+			check_fixation();
+			if (fail_flag ==1){
+				fail_flag = 183; /*break during perif stim*/
+				return;
+		}	
+	}
+	
+	//riority(5,700);
+	Gon_off(4,0);
+	//Gon_off(5,0);
+	Gflush(1);
+	
+	write_plexon(38); /*perif flash off */
+	
+	write_plexon(39); /*random delay*/
+	
+	set_random_interval(randel-r_inv, randel+r_inv+1, inc);
+	while (timer_expired() == 0){
+		check_fixation();
+		if (fail_flag == 1){
+			fail_flag = 184; /*break post-flash */
+			return;
+		}	
+	}
+	
+	Gon_off(0,0);
+	//n_off(5,0);
+	Gflush(1);
+	
+	write_plexon(40); /*end delay + central stim off*/
+	
+}
+
+
+void await_saccade(){
+	
+	MS_TIMERset(3, sacc_wait);
+	MS_TIMERset(4,delT);
+	Gflush(1);
+	write_plexon(41); /*start wait timer */
+	
+	while(MS_TIMERcheck(4) != 0){
+		if (get_fixation_state() == 0){
+			write_plexon(42); /*eye out fix window*/
+			
+			out =1;
+			
+			ITEM_POSbind_fixspot(3,1);
+			EOGfixwin_size_x = pre_win_size;
+			EOGfixwin_size_y = pre_win_size;
+				
+			break;
+		}
+	}
+	
+	
+	while (MS_TIMERcheck(4) != 0){
+			   
+			if (get_fixation_state() == 1){
+				
+				write_plexon(44); /*target acquired during delT */				
+				set_timer(keep_fix); /*stay in window*/
+				
+				Gon_off(3,1);
+				Gflush(1);
+				write_plexon(45); /*perif target on*/
+				
+				while (timer_expired() == 0){
+					check_fixation();
+					if (fail_flag == 1){
+						write_plexon(191); /*fix not maintained after acq*/
+					return;
+					}
+				}
+				
+				write_plexon(46); /*fixation maintained*/
+				
+				Gon_off(3,0);
+				Gflush(1);
+				write_plexon(47); /*perif target off*/
+				return;
+			}
+	}
+	
+	Gon_off(3,1);
+    Gflush(1);
+	write_plexon(54); /*perif target  on*/
+	
+	while((MS_TIMERcheck(3) != 0)&& (out == 0)){
+		if (get_fixation_state() == 0){
+			write_plexon(43); /*eye out fix window*/
+			break;
+		}
+	}
+	
+	GwinSizeREL(3,3,3);
+    ITEM_POSbind_fixspot(3,1);
+    EOGfixwin_size_x = pst_win_size;
+    EOGfixwin_size_y = pst_win_size;
+	  	  
+    while (MS_TIMERcheck(3) != 0){
+		   display_eye_path(1);
+		   
+		   if (get_fixation_state() == 1){
+				
+				write_plexon(55); /*target acquired after delT*/
+				
+				set_timer(keep_fix);
+				while (timer_expired() == 0){
+					check_fixation();
+					if (fail_flag == 1){
+						fail_flag = 191; /*fix not maintained after acq*/
+					return;
+					}
+				}
+				
+				write_plexon(56); /*fixation maintained*/
+				
+				Gon_off(3,0);
+				Gflush(1);
+				write_plexon(57); /*perif target off*/
+				return;
+			}
+		}
+
+	
+	Gon_off(3,0);
+    Gflush(1);
+    fail_flag = 192; /* no target acq*/
+}
+
+
+
+void give_reward(){
+     DEVoutp(2,0x1,255); /* steps-down voltage on port B */
+     DEVoutp(2,0x1,239); /* steps-up voltage on port B */
+     MS_TIMERset (4,REWARD_TIME);
+	 
+	 write_plexon(81); /*solenoid open*/
+     while (MS_TIMERcheck(4) != 0){
+			}
+     DEVoutp(2,0x1,255); /* steps-down port B to trigger drop release */
+	 write_plexon(82); /*solenoid closed*/
+	 
+     return;
+}
+
+void double_reward(){
+     DEVoutp(2,0x1,255); /* steps-down voltage on port B */
+     DEVoutp(2,0x1,239); /* steps-up voltage on port B */
+     MS_TIMERset (4,REWARD_TIME/10);
+	 
+	 //write_plexon(81); /*solenoid open*/
+     while (MS_TIMERcheck(4) != 0){
+			}
+     DEVoutp(2,0x1,255); /* steps-down port B to trigger drop release */
+	 //write_plexon(82); /*solenoid closed*/
+	 
+     return;
+}
+
+void finish_trial(){
+
+     Gon_off(0,0);
+     Gon_off(1,0);
+     Gon_off(2,0);
+     Gon_off(3,0);
+     Gon_off(4,0);
+	 Gon_off(5,0);
+	 Gon_off(6,0);
+   	 Gon_off(7,0);
+	 Gon_off(8,0);
+     Gflush(1);
+     display_eye_path(0);
+     write_plexon(97); /* end eye data collection */
+     put_eye_data_in_buf(0);
+     display_trial_progress(0);
+     update_histogram();
+     display_trial_progress(0);
+     collect_data(0);
+     Gpurge();
+	 EOGfixwin_size_x = fix_win_size;
+     EOGfixwin_size_y = fix_win_size;
+     clear_eog();
+     return;
+}
+
+void rate_response(){
+
+     switch(fail_flag){
+          case 0:
+               response_correct(0);
+               write_plexon(70); /* correct response */
+               break;
+          case 1:
+               response_wrong(0); 
+               write_plexon(76); /* screwed up in some way */
+               break;
+     }
+     return;
+}
+
+void inter_trial_interval(){
+
+     set_timer (bad_pause);
+     if (fail_flag == 0){
+          set_timer (good_pause);
+     }
+     while (timer_expired() == 0);
+     return;
+}
+
+/* ------------ PLEXON STUFF ---------------- */ 
+#define PLEXON_DEV 1
+#define PLEXON_PORT_LSB 0x0
+#define PLEXON_PORT_MSB 0x1
+#define PLEXON_PORT_CTRL 0x2
+#define PLEXON_STROBE_ON 0x3
+#define PLEXON_STROBE_OFF 0x2
+#define PLEXON_START 0x02
+#define PLEXON_STOP 0x00
+#define PLEXON_BUSY ((DEVinp(PLEXON_DEV,PLEXON_PORT_CTRL)>>4)&1) 
+
+void start_plexon(){
+
+     DEVoutp(PLEXON_DEV,PLEXON_PORT_CTRL,PLEXON_START);
+     set_timer(100); /* gives plx code time to be written */
+     while(timer_expired() == 0);
+     write_plexon(98); 
+     while(PLEXON_BUSY);
+     return;
+}
+
+void stop_plexon(){
+
+     write_plexon(99);
+     while(PLEXON_BUSY);
+     set_timer(100); /* gives plx code time to be written */
+     while(timer_expired() == 0);
+     DEVoutp(PLEXON_DEV,PLEXON_PORT_CTRL,PLEXON_STOP);
+     return;
+}
+
+void write_plexon(int code){
+     encode(code);
+     while(PLEXON_BUSY); 
+     DEVoutp(PLEXON_DEV,PLEXON_PORT_LSB,code);
+     DEVoutp(PLEXON_DEV,PLEXON_PORT_MSB,code >> 8);
+     DEVoutp(PLEXON_DEV,PLEXON_PORT_CTRL,PLEXON_STROBE_ON);
+     DEVoutp(PLEXON_DEV,PLEXON_PORT_CTRL,PLEXON_STROBE_OFF);
+     while(PLEXON_BUSY);
+     return;
+}
