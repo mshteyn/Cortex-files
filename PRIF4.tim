@@ -62,7 +62,6 @@ int K;
 int N;
 int CT;
 int out=0;  
-int last=0;
 
 int delT = 400;
 int REWARD_TIME = 305;
@@ -107,10 +106,9 @@ main(){
 		await_saccade();
 	}
 	 
-     if(fail_flag==0){
-		  last = -1;
+     if(fail_flag == 0){
 		  
-		  if(N==-5) {
+		  if(N == 3) {
 			double_reward();
 		  }
 		  
@@ -285,9 +283,7 @@ void lead_on(){
 		}	
 	}
 	
-	//riority(5,700);
 	Gon_off(4,0);
-	//Gon_off(5,0);
 	Gflush(1);
 	
 	write_plexon(38); /*perif flash off */
@@ -304,7 +300,6 @@ void lead_on(){
 	}
 	
 	Gon_off(0,0);
-	//n_off(5,0);
 	Gflush(1);
 	
 	write_plexon(40); /*end delay + central stim off*/
@@ -436,6 +431,11 @@ void double_reward(){
      DEVoutp(2,0x1,255); /* steps-down port B to trigger drop release */
 	 //write_plexon(82); /*solenoid closed*/
 	 
+	 MS_TIMERset (4,30); /* pause between rewards */
+	 
+	 //write_plexon(81); /*solenoid open*/
+     while (MS_TIMERcheck(4) != 0){
+			}
      return;
 }
 
@@ -447,9 +447,6 @@ void finish_trial(){
      Gon_off(3,0);
      Gon_off(4,0);
 	 Gon_off(5,0);
-	 Gon_off(6,0);
-   	 Gon_off(7,0);
-	 Gon_off(8,0);
      Gflush(1);
      display_eye_path(0);
      write_plexon(97); /* end eye data collection */
