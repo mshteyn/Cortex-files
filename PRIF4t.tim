@@ -230,7 +230,7 @@ void lead_on(){
 	
 	write_plexon(32); /*fix delay end*/
 
-	MS_TIMERset(3,stim_on/2);
+	MS_TIMERset(3,stim_on);
 	Gon_off(0,0);
 	Gon_off(1,1);
  	ITEM_POSbind_fixspot(1,1);
