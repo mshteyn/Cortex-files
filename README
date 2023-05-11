@@ -1,6 +1,8 @@
-VC++ written for the Cortex environment. Cortex is a software environment for running behavioral and neurophysiological experiments originally developed at the National Institutes of Mental Health (NIMH).
+VC++ written for the Cortex environment. This set of files was generated to create an experimental environemnt in which a visual cue appears on a monitor in a subject's periphery, after which the program waits until the subject moves their eye to the location of the cue, which triggers the release  of a liquid reward.
 
-The primary file is the timing file (extension ".TIM"), which controls experimental variables like which visual cue appears on a monitor and when with millisecond precision. The code is also designed to respond dynamically to behavior variables like inputs from an eye tracking system or neurophysiological events. 
-The items file ".ITM" and conditions file ".CND" are referred to by the timing file and are used to organize individual trials and sensory stimuli.
+Cortex is a software environment for running behavioral and neurophysiological experiments originally developed at the National Institutes of Mental Health (NIMH).
+
+The primary code is contained in the timing file (extension ".TIM"), which controls experimental variables like which visual cue appears on a monitor and when with millisecond precision. The code is also designed to respond dynamically to behavior variables like inputs from an eye tracking system or neurophysiological events. 
+The items file (".ITM") and conditions file (".CND") are referred to by the timing file and are used to organize individual trials and sensory stimuli.
 
 To learn more about NIMH Cortex, visit https://www.nimh.nih.gov/labs-at-nimh/research-areas/clinics-and-labs/ln/shn/software-projects.shtml.
