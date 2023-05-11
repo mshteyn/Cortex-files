@@ -1,4 +1,4 @@
-VC++ written for the Cortex programming environment. This set of files was generated to create an experimental environemnt in which a visual cue appears on a monitor in a subject's periphery, after which the program waits until the subject moves their eye to the location of the cue, which triggers the release  of a liquid reward.
+VC++ written for the Cortex programming environment. This set of files was written to create a behavioral environemnt in which a visual cue appears on a monitor in a subject's periphery after which the program waits until the subject moves their eye to the location of the cue, which then triggers the release  of a liquid reward.
 
 Cortex is a software environment for running behavioral and neurophysiological experiments originally developed at the National Institutes of Mental Health (NIMH).
 
