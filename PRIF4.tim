@@ -1,11 +1,6 @@
 /*
 PRIF4 07.12.17
-Same as PRIF3 except with 6 targets
-Monkey makes saccade to left, right and down targets in succession. 
-
-Made some digial board changes to allow Arun's code to work on Tamara's ISA
-board layout.
-2-18-09 TM
+A program which presents visual stimuli on a a computer monitor and collects eye movement data.
 */
 
 #include "css_inc.h"
@@ -89,8 +84,8 @@ main(){
 	 ITEM_POSget(1, 1, x_center, y_center, x_size, y_size);
 	 //write_plexon(x_center); /*center of stim*/
 	 //write_plexon(y_center);
-     N = BLOCKget_cond_num();
-     write_plexon(98+N); /* 98 + condition number */
+    	 N = BLOCKget_cond_num();
+    	 write_plexon(98+N); /* 98 + condition number */
 	 write_plexon(delT); /* delay interval */
 	 write_plexon(sacc_wait); /* max resposne time */
 
@@ -132,8 +127,8 @@ void begin_trial(){
      if (allocation_flag != 999)
      {
      
-//        Variables for All programs     
-		  DEVoutp(0,0x1,255); /* erase port B */
+//        Digital Output Variables for All programs     
+	  DEVoutp(0,0x1,255); /* erase port B */
           DEVoutp(0,0x2,255); /* erase port C */
           DEVoutp(1,0x1,255); /* erase port B */
           DEVoutp(1,0x2,255); /* erase port C */
@@ -174,12 +169,12 @@ void begin_trial(){
 
 void await_fixation(){
 
-	 set_timer(attain_fix_window);
-	 GmoveABS(0, 0, 0);
+     set_timer(attain_fix_window);
+     GmoveABS(0, 0, 0);
      move_fixspot(1,0*100,0*100); /* move fixspot to loc 4 */
      Gon_off(0,1); 
-	 DrawBox(0, 0, 2, 2, 15);
-	 Gflush(1); 
+     DrawBox(0, 0, 2, 2, 15);
+     Gflush(1); 
      write_plexon(80); /* Left target on */
 
 
@@ -235,7 +230,7 @@ void lead_on(){
 	Gon_off(1,1);
  	ITEM_POSbind_fixspot(1,1);
 	EOGfixwin_size_x = fix_win_size;
-    EOGfixwin_size_y = fix_win_size;
+        EOGfixwin_size_y = fix_win_size;
 	//Gon_off(10,1); diode
 	Gflush(1);
 	
@@ -268,7 +263,7 @@ void lead_on(){
 	
 	
 	Gon_off(4,1);
-	//n_off(5,1);
+	//Gon_off(5,1);
 	Gflush(1);
 	
 	write_plexon(37); /*perif flash on*/
@@ -357,7 +352,7 @@ void await_saccade(){
 	}
 	
 	Gon_off(3,1);
-    Gflush(1);
+        Gflush(1);
 	write_plexon(54); /*perif target  on*/
 	
 	while((MS_TIMERcheck(3) != 0)&& (out == 0)){
@@ -367,7 +362,7 @@ void await_saccade(){
 		}
 	}
 	
-	GwinSizeREL(3,3,3);
+    GwinSizeREL(3,3,3);
     ITEM_POSbind_fixspot(3,1);
     EOGfixwin_size_x = pst_win_size;
     EOGfixwin_size_y = pst_win_size;
@@ -398,7 +393,7 @@ void await_saccade(){
 		}
 
 	
-	Gon_off(3,0);
+    Gon_off(3,0);
     Gflush(1);
     fail_flag = 192; /* no target acq*/
 }
@@ -410,7 +405,7 @@ void give_reward(){
      DEVoutp(2,0x1,239); /* steps-up voltage on port B */
      MS_TIMERset (4,REWARD_TIME);
 	 
-	 write_plexon(81); /*solenoid open*/
+     write_plexon(81); /*solenoid open*/
      while (MS_TIMERcheck(4) != 0){
 			}
      DEVoutp(2,0x1,255); /* steps-down port B to trigger drop release */
@@ -445,7 +440,7 @@ void finish_trial(){
      Gon_off(2,0);
      Gon_off(3,0);
      Gon_off(4,0);
-	 Gon_off(5,0);
+     Gon_off(5,0);
      Gflush(1);
      display_eye_path(0);
      write_plexon(97); /* end eye data collection */
@@ -455,7 +450,7 @@ void finish_trial(){
      display_trial_progress(0);
      collect_data(0);
      Gpurge();
-	 EOGfixwin_size_x = fix_win_size;
+     EOGfixwin_size_x = fix_win_size;
      EOGfixwin_size_y = fix_win_size;
      clear_eog();
      return;
